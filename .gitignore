@@ -1,0 +1,6 @@
+#Arduino Atom
+*.ino.bin
+*.ino.eep
+*.ino.elf
+*.ino.hex
+*.swp
