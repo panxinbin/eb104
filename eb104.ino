@@ -70,7 +70,7 @@ void setup() {
   tft.begin(ID);
   tft.setRotation(ORIENTATION);
   u8g2_for_adafruit_gfx.begin(tft);                 // connect u8g2 procedures to Adafruit GFX
-  
+
   drawMain();
   Serial.println("End setup");
 }
@@ -81,13 +81,20 @@ void setup() {
 void drawMain(){
   tft.fillRect(0, 0, tft.width(), tft.height(), LCD_MAIN_BG);
 
-  drawMeasure(0,MAX_FWD,LBL_FWD,LCD_FWD_X,LCD_FWD_Y,LCD_FWD_W,LCD_FWD_H,1,LBL_FWD_MIN,LBL_FWD_MAX);
-  drawMeasure(0,MAX_REF,LBL_REF,LCD_REF_X,LCD_REF_Y,LCD_REF_W,LCD_REF_H,1,LBL_REF_MIN,LBL_REF_MAX);
-  drawMeasure(0,MAX_SWR,LBL_SWR,LCD_SWR_X,LCD_SWR_Y,LCD_SWR_W,LCD_SWR_H,1,LBL_SWR_MIN,LBL_SWR_MAX);
-  drawMeasure(0,MAX_TMP,LBL_TMP,LCD_TMP_X,LCD_TMP_Y,LCD_TMP_W,LCD_TMP_H,1,LBL_TMP_MIN,LBL_TMP_MAX);
-  drawMeasure(0,MAX_V,LBL_V,LCD_V_X,LCD_V_Y,LCD_V_W,LCD_V_H,1,LBL_V_MIN,LBL_V_MAX);
-  drawMeasure(0,MAX_I,LBL_I,LCD_I_X,LCD_I_Y,LCD_I_W,LCD_I_H,1,LBL_I_MIN,LBL_I_MAX);
-  drawMessage("Started");
+  drawMeasure(0,MAX_FWD,LBL_FWD,LCD_FWD_X,LCD_FWD_Y,
+              LCD_FWD_W,LCD_FWD_H,1,LBL_FWD_MIN,LBL_FWD_MAX);
+  drawMeasure(0,MAX_REF,LBL_REF,LCD_REF_X,LCD_REF_Y,
+              LCD_REF_W,LCD_REF_H,1,LBL_REF_MIN,LBL_REF_MAX);
+  drawMeasure(0,MAX_SWR,LBL_SWR,LCD_SWR_X,LCD_SWR_Y,
+              LCD_SWR_W,LCD_SWR_H,1,LBL_SWR_MIN,LBL_SWR_MAX);
+  drawMeasure(0,MAX_TMP,LBL_TMP,LCD_TMP_X,LCD_TMP_Y,
+              LCD_TMP_W,LCD_TMP_H,1,LBL_TMP_MIN,LBL_TMP_MAX);
+  drawMeasure(0,MAX_V,LBL_V,LCD_V_X,LCD_V_Y,
+              LCD_V_W,LCD_V_H,1,LBL_V_MIN,LBL_V_MAX);
+  drawMeasure(0,MAX_I,LBL_I,LCD_I_X,LCD_I_Y,
+              LCD_I_W,LCD_I_H,1,LBL_I_MIN,LBL_I_MAX);
+
+  drawMessage(LBL_INITIAL_MSG);
   drawButtons();
 
 }
@@ -130,7 +137,7 @@ void drawMeasure(long value, long max, char label[],int x, int y, int len, int h
                 2+y+LCD_SPACING*4+h_font+height/3,
                 x+len,
                 2+y+LCD_SPACING*4+h_font+height/3,LCD_MSR_FG);
-  
+
   }
 
   //print value
@@ -144,7 +151,14 @@ void drawMeasure(long value, long max, char label[],int x, int y, int len, int h
   u8g2_for_adafruit_gfx.print(value);
 
   //draw bar
-  drawMeasureBar(value,max,x+LCD_SPACING,y+LCD_SPACING*4+h_font,len-LCD_SPACING*2,height/3,LCD_SPACE_BAR,LCD_BORDER_BAR);
+  drawMeasureBar(value,
+                max,
+                x+LCD_SPACING,
+                y+LCD_SPACING*4+h_font,
+                len-LCD_SPACING*2,
+                height/3,
+                LCD_SPACE_BAR,
+                LCD_BORDER_BAR);
 
 }
 
@@ -184,7 +198,7 @@ void drawButtons() {
 
   int tft_height = tft.height();
   int tft_width = tft.width();
-  
+
   for(int i=LCD_SPACING;i<tft_width;i=i+tft_width/BUTTONS) {
     buttons[idxBtn].width=tft_width/BUTTONS-LCD_SPACING*2;
     buttons[idxBtn].height=tft_height-LCD_BTN_H;
@@ -197,9 +211,9 @@ void drawButtons() {
 
     //drawSingleButton(buttons[idxBtn].x,buttons[idxBtn].y,buttons[idxBtn].width,buttons[idxBtn].height,buttons[idxBtn].enabled, buttons[idxBtn].x_label,buttons[idxBtn].y_label,buttons[idxBtn].label);
     drawSingleButton(buttons[idxBtn]);
-    
+
     idxBtn++;
-  } 
+  }
 
 }
 
@@ -211,7 +225,7 @@ void drawSingleButton(button b) {
 
   u8g2_for_adafruit_gfx.setBackgroundColor(LCD_BTN_BG);
   u8g2_for_adafruit_gfx.setFont(FNT_BUTTONS);  // select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
-  
+
   if (b.enabled == 1) {
     u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG);
   } else {
@@ -221,7 +235,7 @@ void drawSingleButton(button b) {
   tft.fillRect(b.x,b.y,b.width,b.height,LCD_BTN_BG);
   u8g2_for_adafruit_gfx.setCursor(b.x_label, b.y_label);
   u8g2_for_adafruit_gfx.print(b.label);
- 
+
 }
 
 /*------------------------------------------------------------------------------
@@ -233,7 +247,8 @@ void drawMessage(char msg[]){
   u8g2_for_adafruit_gfx.setFont(FNT_MESSAGE);
   u8g2_for_adafruit_gfx.setForegroundColor(LCD_MSG_FG);
   u8g2_for_adafruit_gfx.setBackgroundColor(LCD_MSG_BG);
-  u8g2_for_adafruit_gfx.setCursor(LCD_MSG_X,tft.height()-LCD_BTN_H-(u8g2_for_adafruit_gfx.getFontAscent()+u8g2_for_adafruit_gfx.getFontDescent()*-1)/2);
+  u8g2_for_adafruit_gfx.setCursor(LCD_MSG_X,
+                                  tft.height()-LCD_BTN_H-(u8g2_for_adafruit_gfx.getFontAscent()+u8g2_for_adafruit_gfx.getFontDescent()*-1)/2);
   u8g2_for_adafruit_gfx.print(msg);
 }
 
@@ -241,7 +256,7 @@ void drawMessage(char msg[]){
 MAIN LOOP
 *******************************************************************************/
 void loop() {
-  
+
 static int nr;
 
     getTouch();
@@ -264,7 +279,7 @@ static int nr;
         fwd=fwd/nr;
         ref=ref/nr;
         nr=0;
-        
+
 
 /*
           // compute SWR and return
@@ -306,11 +321,20 @@ static int nr;
 }
 
 void showFWD(float value) {
-  
+
   static float sv_value=-9999;
 
   if (value!=sv_value) {
-    drawMeasure((int)quadratic(value),MAX_FWD,LBL_FWD,LCD_FWD_X,LCD_FWD_Y,LCD_FWD_W,LCD_FWD_H,0,LBL_FWD_MIN,LBL_FWD_MAX);
+    drawMeasure((int)quadratic(value),
+                MAX_FWD,
+                LBL_FWD,
+                LCD_FWD_X,
+                LCD_FWD_Y,
+                LCD_FWD_W,
+                LCD_FWD_H,
+                0,
+                LBL_FWD_MIN,
+                LBL_FWD_MAX);
     sv_value=value;
   }
 }
@@ -336,7 +360,7 @@ void getTouch(){
   //digitalWrite(YP, HIGH);  //because TFT control pins
   //digitalWrite(XM, HIGH);
 
-    
+
   // we have some minimum pressure we consider 'valid'
   // pressure of 0 means no pressing!
 
@@ -344,7 +368,7 @@ void getTouch(){
 
     xpos = map(tp.y, TS_LEFT, TS_RT, 0, tft.width());
     ypos = map(tp.x, TS_TOP, TS_BOT, 0, tft.height());
-    
+
     if (ypos > (buttons[0].y)) {
       for(int i=0;i<BUTTONS;i++) {
         if ((xpos >= buttons[i].x) && (xpos <= buttons[i].x+buttons[i].width)) {

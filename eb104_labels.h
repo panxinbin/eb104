@@ -13,13 +13,14 @@
 #define LBL_SWR_MAX "++"
 #define LBL_TMP_MIN "0"
 #define LBL_TMP_MAX "100"
-#define LBL_V_MIN "0"
-#define LBL_V_MAX "50"
-#define LBL_I_MIN "0"
-#define LBL_I_MAX "26"
+#define LBL_V_MIN   "0"
+#define LBL_V_MAX   "50"
+#define LBL_I_MIN   "0"
+#define LBL_I_MAX   "26"
 
+#define LBL_INITIAL_MSG "Hello IU1BOW"
 
-const char *LBL_BUTTON[]={"STBY","UP","DOWN","AUTO",">>"};
+static const char *LBL_BUTTON[]={"STBY","UP","DOWN","AUTO",">>"};
 
 
 // STDB/UP/DOWN/AUTO/SET

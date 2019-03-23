@@ -38,48 +38,48 @@
 #define FNT_MESSAGE     u8g2_font_inr19_mf
 */
 //positions and dimensions
-const int ORIENTATION=1;
+static const int ORIENTATION=1;
 //FWD box
-const int LCD_FWD_X=3;
-const int LCD_FWD_Y=1;
-const int LCD_FWD_W=475;
-const int LCD_FWD_H=40;
+static const int LCD_FWD_X=3;
+static const int LCD_FWD_Y=1;
+static const int LCD_FWD_W=475;
+static const int LCD_FWD_H=40;
 //SWR box
-const int LCD_SWR_X=3;
-const int LCD_SWR_Y=45;
-const int LCD_SWR_W=475;
-const int LCD_SWR_H=40;
+static const int LCD_SWR_X=3;
+static const int LCD_SWR_Y=45;
+static const int LCD_SWR_W=475;
+static const int LCD_SWR_H=40;
 //REFLECTED box
-const int LCD_REF_X=3;
-const int LCD_REF_Y=90;
-const int LCD_REF_W=475/2-3;
-const int LCD_REF_H=40;
+static const int LCD_REF_X=3;
+static const int LCD_REF_Y=90;
+static const int LCD_REF_W=475/2-3;
+static const int LCD_REF_H=40;
 //TEMPERATURE box
-const int LCD_TMP_X=3+475/2;
-const int LCD_TMP_Y=90;
-const int LCD_TMP_W=475/2;
-const int LCD_TMP_H=40;
+static const int LCD_TMP_X=3+475/2;
+static const int LCD_TMP_Y=90;
+static const int LCD_TMP_W=475/2;
+static const int LCD_TMP_H=40;
 //VOLTAGE BOX
-const int LCD_V_X=3;
-const int LCD_V_Y=135;
-const int LCD_V_W=475/2-3;
-const int LCD_V_H=40;
+static const int LCD_V_X=3;
+static const int LCD_V_Y=135;
+static const int LCD_V_W=475/2-3;
+static const int LCD_V_H=40;
 //CURRENT BOX
-const int LCD_I_X=3+475/2;
-const int LCD_I_Y=135;
-const int LCD_I_W=475/2;
-const int LCD_I_H=40;
+static const int LCD_I_X=3+475/2;
+static const int LCD_I_Y=135;
+static const int LCD_I_W=475/2;
+static const int LCD_I_H=40;
 //measure bar configuration
-const int LCD_SPACE_BAR=10;
-const int LCD_BORDER_BAR=2;
+static const int LCD_SPACE_BAR=10;
+static const int LCD_BORDER_BAR=2;
 
 //space betwen elements
-const int LCD_SPACING=2;
+static const int LCD_SPACING=2;
 //number of buttons on the base line
-const int BUTTONS=5;
+static const int BUTTONS=5;
 //buttons height
-const int LCD_BTN_H=60;
+static const int LCD_BTN_H=60;
 
 //message bar
-const int LCD_MSG_H=30;
-const int LCD_MSG_X=10;
+static const int LCD_MSG_H=30;
+static const int LCD_MSG_X=10;
