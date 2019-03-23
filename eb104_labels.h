@@ -19,7 +19,7 @@
 #define LBL_I_MAX "26"
 
 
-const char *button[]={"STBY","UP","DOWN","AUTO",">>"};
+const char *LBL_BUTTON[]={"STBY","UP","DOWN","AUTO",">>"};
 
 
 // STDB/UP/DOWN/AUTO/SET

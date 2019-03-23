@@ -14,6 +14,7 @@
 
 #define LCD_BTN_FG      0xFFFF  //button fg
 #define LCD_BTN_BG      0x3B57  //button bg
+#define LCD_BTN_FG_DIS  0x3186  //button fg disabled
 
 //fonts
 /*

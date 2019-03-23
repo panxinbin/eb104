@@ -30,6 +30,25 @@ U8G2_FOR_ADAFRUIT_GFX u8g2_for_adafruit_gfx;
 TouchScreen ts(XP, YP, XM, YM, 300);   //re-initialised after diagnose
 TSPoint tp;                            //global point
 
+
+/*------------------------------------------------------------------------------
+Globals
+------------------------------------------------------------------------------*/
+
+struct button {
+  bool pressed;
+  bool enabled;
+  char *label;
+  int x;
+  int y;
+  int width;
+  int height;
+  int x_label;
+  int y_label;
+};
+
+struct button buttons[BUTTONS];
+
 float fwd;
 float ref;
 
@@ -151,10 +170,8 @@ void drawButtons() {
 
   byte idxBtn=0;
 
-  u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG);
-  u8g2_for_adafruit_gfx.setBackgroundColor(LCD_BTN_BG);
-  u8g2_for_adafruit_gfx.setFont(FNT_BUTTONS);  // select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
 
+/*
   for(int i=LCD_SPACING;i<tft.width();i=i+tft.width()/BUTTONS) {
     int w=tft.width()/BUTTONS-LCD_SPACING*2;
     tft.fillRect(LCD_SPACING+i,tft.height()-LCD_BTN_H-LCD_SPACING*2,w,tft.height()-LCD_BTN_H,LCD_BTN_BG);
@@ -163,7 +180,48 @@ void drawButtons() {
     u8g2_for_adafruit_gfx.setCursor(LCD_SPACING*2+i+x, y);
     u8g2_for_adafruit_gfx.print(button[idxBtn]);
     idxBtn++;
+  } */
+
+  int tft_height = tft.height();
+  int tft_width = tft.width();
+  
+  for(int i=LCD_SPACING;i<tft_width;i=i+tft_width/BUTTONS) {
+    buttons[idxBtn].width=tft_width/BUTTONS-LCD_SPACING*2;
+    buttons[idxBtn].height=tft_height-LCD_BTN_H;
+    buttons[idxBtn].x=LCD_SPACING+i;
+    buttons[idxBtn].y=tft_height-LCD_BTN_H-LCD_SPACING*2;
+    buttons[idxBtn].label=LBL_BUTTON[idxBtn];
+    buttons[idxBtn].x_label=LCD_SPACING*2+i+(buttons[idxBtn].width-u8g2_for_adafruit_gfx.getUTF8Width(buttons[idxBtn].label))/2;
+    buttons[idxBtn].y_label=tft.height()-(LCD_BTN_H-u8g2_for_adafruit_gfx.getFontAscent()+u8g2_for_adafruit_gfx.getFontDescent()*-1)/2;
+    buttons[idxBtn].enabled=true;
+
+    //drawSingleButton(buttons[idxBtn].x,buttons[idxBtn].y,buttons[idxBtn].width,buttons[idxBtn].height,buttons[idxBtn].enabled, buttons[idxBtn].x_label,buttons[idxBtn].y_label,buttons[idxBtn].label);
+    drawSingleButton(buttons[idxBtn]);
+    
+    idxBtn++;
+  } 
+
+}
+
+/*.............................................................................
+  Draw ingle button
+..............................................................................*/
+//void drawSingleButton(int x, int y, int width, int height, bool enabled, int x_label, int y_label, char *label) {
+void drawSingleButton(button b) {
+
+  u8g2_for_adafruit_gfx.setBackgroundColor(LCD_BTN_BG);
+  u8g2_for_adafruit_gfx.setFont(FNT_BUTTONS);  // select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
+  
+  if (b.enabled == 1) {
+    u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG);
+  } else {
+    u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG_DIS);
   }
+
+  tft.fillRect(b.x,b.y,b.width,b.height,LCD_BTN_BG);
+  u8g2_for_adafruit_gfx.setCursor(b.x_label, b.y_label);
+  u8g2_for_adafruit_gfx.print(b.label);
+ 
 }
 
 /*------------------------------------------------------------------------------
@@ -232,7 +290,7 @@ static int nr;
           // store the final result
           m_SWR = wf;
    */
-   
+   /*
         Serial.print(fwd);
         Serial.print("\t");
         //quadratic fit
@@ -242,7 +300,7 @@ static int nr;
         Serial.print("\t");
         //Serial.print(m_SWR);
         Serial.print("\n");
-   
+   */
         showFWD(fwd);
       }
 }
@@ -265,9 +323,12 @@ float quadratic(float x){
   return FWD_QUADRATIC_A*pow(x,2)+FWD_QUADRATIC_B*x+FWD_QUADRATIC_C;
 }
 
+/*------------------------------------------------------------------------------
+  Check if a button is pressed
+ -----------------------------------------------------------------------------*/
 void getTouch(){
 
-  uint16_t xpos, ypos;  //screen coordinates
+  int xpos, ypos;  //screen coordinates
   tp = ts.getPoint();   //tp.x, tp.y are ADC values
   // if sharing pins, you'll need to fix the directions of the touchscreen pins
   pinMode(XM, OUTPUT);
@@ -280,28 +341,19 @@ void getTouch(){
   // pressure of 0 means no pressing!
 
   if (tp.z > MINPRESSURE && tp.z < MAXPRESSURE) {
-    int tft_height = tft.height();
-    int tft_width = tft.width();
 
-    xpos = map(tp.y, TS_LEFT, TS_RT, 0, tft_width);
-    ypos = map(tp.x, TS_TOP, TS_BOT, 0, tft_height);
+    xpos = map(tp.y, TS_LEFT, TS_RT, 0, tft.width());
+    ypos = map(tp.x, TS_TOP, TS_BOT, 0, tft.height());
     
-    tft.drawPixel(xpos,ypos,LCD_BTN_FG);
-    if (ypos > (tft_height -LCD_BTN_H)) {
-      int button_width=tft_width/BUTTONS;
-      if (xpos > button_width*4){
-          drawMessage (">>");
-      } else if (xpos > button_width*3) {
-          drawMessage ("AUTO");
-      } else if (xpos > button_width*2) {
-          drawMessage ("DOWN");
-      } else if (xpos > button_width*1) {
-          drawMessage ("UP");
-      } else { //if (tp.x > 200) {
-          drawMessage ("STBY");
-      };
-
-    };
-
-}
+    if (ypos > (buttons[0].y)) {
+      for(int i=0;i<BUTTONS;i++) {
+        if ((xpos >= buttons[i].x) && (xpos <= buttons[i].x+buttons[i].width)) {
+          buttons[i].pressed = true;
+          drawMessage (buttons[i].label);
+        } else {
+          buttons[i].pressed = false;
+        }
+      }
+    }
+  }
 }
