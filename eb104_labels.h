@@ -20,7 +20,7 @@
 
 #define LBL_INITIAL_MSG "Hello IU1BOW"
 
-static const char *LBL_BUTTON[]={"STBY","UP","DOWN","AUTO",">>"};
+static const char *LBL_BUTTON[]={"STBY","UP","DOWN","AUTO","RESET"};
 
 
 // STDB/UP/DOWN/AUTO/SET

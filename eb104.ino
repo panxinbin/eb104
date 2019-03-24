@@ -58,19 +58,39 @@ SETUP
 *******************************************************************************/
 void setup() {
 
+  //setup serial
   Serial.begin(9600);
-
   uint32_t when = millis();
   if (!Serial) delay(5000);           //allow some time for Leonardo
   Serial.println("Serial took " + String((millis() - when)) + "ms to start");
+
+  //setup tft and fonts
   uint16_t ID = tft.readID(); //
-  Serial.print("ID = 0x");
+  Serial.print("TFT ID = 0x");
   Serial.println(ID, HEX);
   if (ID == 0xD3D3) ID = 0x9481; // write-only shield
   tft.begin(ID);
   tft.setRotation(ORIENTATION);
   u8g2_for_adafruit_gfx.begin(tft);                 // connect u8g2 procedures to Adafruit GFX
 
+  //setup pins
+  pinMode(PIN_STDBY,OUTPUT);
+  pinMode(PIN_RESET,OUTPUT);
+  pinMode(PIN_BND_40,OUTPUT);
+  pinMode(PIN_BND_20,OUTPUT);
+  pinMode(PIN_BND_15,OUTPUT);
+  pinMode(PIN_BND_10,OUTPUT);
+
+  digitalWrite(PIN_STDBY,HIGH);
+  digitalWrite(PIN_RESET,LOW);
+  digitalWrite(PIN_BND_40,LOW);
+  digitalWrite(PIN_BND_20,HIGH);
+  digitalWrite(PIN_BND_15,LOW);
+  digitalWrite(PIN_BND_10,LOW);
+
+  Serial.println("ditigal pins setted");
+
+  //setup inital screen
   drawMain();
   Serial.println("End setup");
 }
@@ -102,7 +122,8 @@ void drawMain(){
 /*------------------------------------------------------------------------------
   Draw a measure object
 ------------------------------------------------------------------------------*/
-void drawMeasure(long value, long max, char label[],int x, int y, int len, int height,byte reset,char lbl_min[], char lbl_max[]) {
+void drawMeasure(long value, long max, char label[],int x, int y, int len,
+                  int height,byte reset,char lbl_min[], char lbl_max[]) {
 
   u8g2_for_adafruit_gfx.setBackgroundColor(LCD_MSR_BG);
   int x_curs;
@@ -159,13 +180,13 @@ void drawMeasure(long value, long max, char label[],int x, int y, int len, int h
                 height/3,
                 LCD_SPACE_BAR,
                 LCD_BORDER_BAR);
-
 }
 
 /*..............................................................................
   Draw a measure bar, inside a measure object
  .............................................................................*/
-void drawMeasureBar(long value, long max, int x, int y, int len, int height, int space, int border) {
+void drawMeasureBar(long value, long max, int x, int y, int len, int height,
+                    int space, int border) {
 
   int filled =  len*value/max;
 
@@ -364,7 +385,8 @@ void getTouch(){
   // we have some minimum pressure we consider 'valid'
   // pressure of 0 means no pressing!
 
-  if (tp.z > MINPRESSURE && tp.z < MAXPRESSURE) {
+  //if (tp.z > MINPRESSURE && tp.z < MAXPRESSURE) {
+  if (tp.z > MINPRESSURE) {
 
     xpos = map(tp.y, TS_LEFT, TS_RT, 0, tft.width());
     ypos = map(tp.x, TS_TOP, TS_BOT, 0, tft.height());
@@ -373,6 +395,20 @@ void getTouch(){
       for(int i=0;i<BUTTONS;i++) {
         if ((xpos >= buttons[i].x) && (xpos <= buttons[i].x+buttons[i].width)) {
           buttons[i].pressed = true;
+          if (i==0) {
+            Serial.print(buttons[i].enabled);
+            Serial.print("--->");
+            mngSTDBY(&buttons[i].enabled);
+            Serial.println(buttons[i].enabled);
+          } else if (i==1) {
+            mngUP(&buttons[i].enabled);
+          } else if (i==2) {
+            mngDOWN(&buttons[i].enabled);
+          } else if (i==3) {
+            mngAUTO(&buttons[i].enabled);
+          } else if (i==4) {
+            mngRESET(&buttons[i].enabled);
+          }
           drawMessage (buttons[i].label);
         } else {
           buttons[i].pressed = false;
@@ -380,4 +416,28 @@ void getTouch(){
       }
     }
   }
+}
+
+
+void mngSTDBY(bool *enabled) {
+  //TODO: testare bene
+  //TODO: gestione RIMBALZO
+  *enabled=!*enabled;
+  digitalWrite(PIN_STDBY,*enabled);
+}
+
+void mngUP(bool *enabled) {
+  //TODO
+}
+
+void mngDOWN(bool *enabled) {
+  //TODO
+}
+
+void mngAUTO(bool *enabled) {
+  //TODO
+}
+
+void mngRESET(bool *enabled) {
+  //TODO
 }

@@ -4,8 +4,18 @@
 #define LCD_RD A0 // LCD Read goes to Analog 0
 #define LCD_RESET A4 // Can alternately just connect to Arduino's reset pin
 
+
 static const int sensorPinFWD = A13;    // GIALLO
 static const int sensorPinREF = A12;    // BIANCO
+
+static const int PIN_STDBY = 43;
+static const int PIN_RESET = 41;
+static const int PIN_BND_40 = 39;
+static const int PIN_BND_20 = 37;
+static const int PIN_BND_15 = 35;
+static const int PIN_BND_10 = 33;
+
+
 
 static const int MAX_FWD = 600;
 static const int MAX_REF = 100;
