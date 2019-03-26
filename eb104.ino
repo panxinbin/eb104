@@ -88,7 +88,7 @@ void setup() {
   digitalWrite(PIN_BND_15,LOW);
   digitalWrite(PIN_BND_10,LOW);
 
-  Serial.println("ditigal pins setted");
+  Serial.println("digital pins setted");
 
   //setup inital screen
   drawMain();
@@ -369,59 +369,59 @@ float quadratic(float x){
 }
 
 /*------------------------------------------------------------------------------
+
   Check if a button is pressed
- -----------------------------------------------------------------------------*/
+
+-----------------------------------------------------------------------------*/
+
 void getTouch(){
 
-  int xpos, ypos;  //screen coordinates
+  static bool tftToRelease;
+  static int xpos, ypos;  //screen coordinates
+  static byte cntNotPress = MAX_CNT_NOT_PRESS;
+
   tp = ts.getPoint();   //tp.x, tp.y are ADC values
   // if sharing pins, you'll need to fix the directions of the touchscreen pins
   pinMode(XM, OUTPUT);
   pinMode(YP, OUTPUT);
-  //digitalWrite(YP, HIGH);  //because TFT control pins
-  //digitalWrite(XM, HIGH);
 
-
-  // we have some minimum pressure we consider 'valid'
-  // pressure of 0 means no pressing!
-
-  //if (tp.z > MINPRESSURE && tp.z < MAXPRESSURE) {
   if (tp.z > MINPRESSURE) {
-
-    xpos = map(tp.y, TS_LEFT, TS_RT, 0, tft.width());
-    ypos = map(tp.x, TS_TOP, TS_BOT, 0, tft.height());
-
-    if (ypos > (buttons[0].y)) {
-      for(int i=0;i<BUTTONS;i++) {
-        if ((xpos >= buttons[i].x) && (xpos <= buttons[i].x+buttons[i].width)) {
-          buttons[i].pressed = true;
-          if (i==0) {
-            Serial.print(buttons[i].enabled);
-            Serial.print("--->");
-            mngSTDBY(&buttons[i].enabled);
-            Serial.println(buttons[i].enabled);
-          } else if (i==1) {
-            mngUP(&buttons[i].enabled);
-          } else if (i==2) {
-            mngDOWN(&buttons[i].enabled);
-          } else if (i==3) {
-            mngAUTO(&buttons[i].enabled);
-          } else if (i==4) {
-            mngRESET(&buttons[i].enabled);
+    if (cntNotPress == 0) {
+      cntNotPress = MAX_CNT_NOT_PRESS;
+      tftToRelease = 1;
+      xpos = map(tp.y, TS_LEFT, TS_RT, 0, tft.width());
+      ypos = map(tp.x, TS_TOP, TS_BOT, 0, tft.height());
+    } else if (tftToRelease == 1) {
+      tftToRelease = 0;
+      if (ypos > (buttons[0].y)) {
+        for(int i=0;i<BUTTONS;i++) {
+          if ((xpos >= buttons[i].x) && (xpos <= buttons[i].x+buttons[i].width)) {
+            buttons[i].pressed = true;
+            if (i==0) {
+              mngSTDBY(&buttons[i].enabled);
+            } else if (i==1) {
+              mngUP(&buttons[i].enabled);
+            } else if (i==2) {
+              mngDOWN(&buttons[i].enabled);
+            } else if (i==3) {
+              mngAUTO(&buttons[i].enabled);
+            } else if (i==4) {
+              mngRESET(&buttons[i].enabled);
+            }
+            drawMessage (buttons[i].label);
+          } else {
+            buttons[i].pressed = false;
           }
-          drawMessage (buttons[i].label);
-        } else {
-          buttons[i].pressed = false;
         }
       }
     }
+  } else if (cntNotPress > 0) {
+    cntNotPress--;
   }
 }
 
-
 void mngSTDBY(bool *enabled) {
   //TODO: testare bene
-  //TODO: gestione RIMBALZO
   *enabled=!*enabled;
   digitalWrite(PIN_STDBY,*enabled);
 }
