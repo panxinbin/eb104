@@ -35,3 +35,5 @@ static const byte MAX_CNT_NOT_PRESS=14;
 static const float FWD_QUADRATIC_A=0.000249622;
 static const float FWD_QUADRATIC_B=0.0399433;
 static const float FWD_QUADRATIC_C=-5.32213;
+
+enum button_index{STDBY,UP,DOWN,AUTO,RESET};

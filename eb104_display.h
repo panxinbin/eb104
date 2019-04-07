@@ -14,31 +14,17 @@
 
 #define LCD_BTN_FG      0xFFFF  //button fg
 #define LCD_BTN_BG      0x3B57  //button bg
+#define LCD_BTN_BG_PRES 0x04BF  //button bg pressed
 #define LCD_BTN_FG_DIS  0x3186  //button fg disabled
 #define LCD_BTN_ON      0x17E0  //button on
 #define LCD_BTN_OFF     0x4288  //button off
 
 //fonts
-/*
-#define FNT_MAX_MIN     u8g2_font_7x13B_mr
-#define FNT_MEASURE     u8g2_font_8x13B_tr
-#define FNT_BUTTONS     u8g2_font_helvR14_tf
-#define FNT_MESSAGE     u8g2_font_helvR14_tf
-*/
-
-
 #define FNT_MAX_MIN     u8g2_font_profont15_tf
 #define FNT_MEASURE     u8g2_font_profont22_tf
 #define FNT_BUTTONS     u8g2_font_profont29_tf
 #define FNT_MESSAGE     u8g2_font_profont22_tf
 
-/*
-
-#define FNT_MAX_MIN     u8g2_font_inr16_mf
-#define FNT_MEASURE     u8g2_font_inr19_mf
-#define FNT_BUTTONS     u8g2_font_inr21_mf
-#define FNT_MESSAGE     u8g2_font_inr19_mf
-*/
 //positions and dimensions
 static const int ORIENTATION=1;
 //FWD box

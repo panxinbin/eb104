@@ -212,13 +212,17 @@ void drawButtons(bool init) {
 
   for(int i=LCD_SPACING;i<tft_width;i=i+tft_width/BUTTONS) {
     if (init) {
-      if (idxBtn==0) {  //enabling only stdby button
+      if (idxBtn==STDBY) {  //enabling only stdby button
         buttons[idxBtn].state=on;
         buttons[idxBtn].enabled=true;
-      } else {
-        buttons[idxBtn].state=null;
+      } else if (idxBtn==AUTO) {  //for auto button set the led to off
+        buttons[idxBtn].state=on;
         buttons[idxBtn].enabled=false;
+      } else {
+       buttons[idxBtn].state=null;
+       buttons[idxBtn].enabled=false;
       }
+      buttons[idxBtn].pressed=false;
       buttons[idxBtn].width=tft_width/BUTTONS-LCD_SPACING*2;
       buttons[idxBtn].height=tft_height-LCD_BTN_H;
       buttons[idxBtn].x=LCD_SPACING+i;
@@ -243,13 +247,17 @@ void drawSingleButton(button b) {
   u8g2_for_adafruit_gfx.setFont(FNT_BUTTONS);  // select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
 
   //draw buttons
-  if (b.enabled == 1) {
+  if (b.enabled == true) {
     u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG);
   } else {
     u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG_DIS);
   }
 
-  tft.fillRect(b.x,b.y,b.width,b.height,LCD_BTN_BG);
+  if (b.pressed == true) {
+    tft.fillRect(b.x,b.y,b.width,b.height,LCD_BTN_BG_PRES);
+  } else {
+    tft.fillRect(b.x,b.y,b.width,b.height,LCD_BTN_BG);
+  }
 
   //write "led" only on buttons with state on or off
   if (b.state == on) {
@@ -297,51 +305,51 @@ static int nr;
  *  quadratic fit {130,5},{180,10},{330,30},{390,50},{460,70},{580,100}
  *  https://www.wolframalpha.com/input/
  */
-      nr++;
-      fwd=fwd+analogRead(sensorPinFWD);
-      // read reverse voltage
-      ref=ref+analogRead(sensorPinREF);
-      if (nr>100) {
-        fwd=fwd/nr;
-        ref=ref/nr;
-        nr=0;
+  nr++;
+  fwd=fwd+analogRead(sensorPinFWD);
+  // read reverse voltage
+  ref=ref+analogRead(sensorPinREF);
+  if (nr>100) {
+    fwd=fwd/nr;
+    ref=ref/nr;
+    nr=0;
 /*
-          // compute SWR and return
-          float wf;
-          if (ref == 0 || fwd < m_MinPower) {
-            wf = 1.0;
-          } else if (ref >= fwd) {
-            wf = maxSwr;
-          } else {
-            #ifdef USE_VOLTAGE_CALC
-            wf = (float)(fwd + ref) / (float)(fwd - ref);
-            #else
-            wf = (float)fwd / (float)ref;
-            wf = sqrt(wf);
-            wf = (1.0 + wf) / (1.0 - wf);
-            #endif
-            wf = abs(wf);
-          }
-
-          // clip the SWR at a reasonable value
-          if (wf > maxSwr) wf = maxSwr;
-
-          // store the final result
-          m_SWR = wf;
-   */
-   /*
-        Serial.print(fwd);
-        Serial.print("\t");
-        //quadratic fit
-        Serial.print(quadratic(fwd));
-        Serial.print("\t");
-        Serial.print(ref);
-        Serial.print("\t");
-        //Serial.print(m_SWR);
-        Serial.print("\n");
-   */
-        showFWD(fwd);
+      // compute SWR and return
+      float wf;
+      if (ref == 0 || fwd < m_MinPower) {
+        wf = 1.0;
+      } else if (ref >= fwd) {
+        wf = maxSwr;
+      } else {
+        #ifdef USE_VOLTAGE_CALC
+        wf = (float)(fwd + ref) / (float)(fwd - ref);
+        #else
+        wf = (float)fwd / (float)ref;
+        wf = sqrt(wf);
+        wf = (1.0 + wf) / (1.0 - wf);
+        #endif
+        wf = abs(wf);
       }
+
+      // clip the SWR at a reasonable value
+      if (wf > maxSwr) wf = maxSwr;
+
+      // store the final result
+      m_SWR = wf;
+*/
+/*
+    Serial.print(fwd);
+    Serial.print("\t");
+    //quadratic fit
+    Serial.print(quadratic(fwd));
+    Serial.print("\t");
+    Serial.print(ref);
+    Serial.print("\t");
+    //Serial.print(m_SWR);
+    Serial.print("\n");
+*/
+    showFWD(fwd);
+  }
 }
 
 void showFWD(float value) {
@@ -372,9 +380,7 @@ float quadratic(float x){
 }
 
 /*------------------------------------------------------------------------------
-
   Check if a button is pressed
-
 -----------------------------------------------------------------------------*/
 
 void getTouch(){
@@ -399,15 +405,15 @@ void getTouch(){
       if (ypos > (buttons[0].y)) {
         for(int i=0;i<BUTTONS;i++) {
           if ((xpos >= buttons[i].x) && (xpos <= buttons[i].x+buttons[i].width)) {
-            if (i==0) {
-              mngSTDBY();
-            } else if (i==1) {
+            if (i==STDBY) {
+              mngSTDBY(&buttons[i]);
+            } else if (i==UP) {
               mngUP(&buttons[i]);
-            } else if (i==2) {
+            } else if (i==DOWN) {
               mngDOWN(&buttons[i]);
-            } else if (i==3) {
+            } else if (i==AUTO) {
               mngAUTO(&buttons[i]);
-            } else if (i==4) {
+            } else if (i==RESET) {
               mngRESET(&buttons[i]);
             }
           }
@@ -418,56 +424,84 @@ void getTouch(){
     cntNotPress--;
   }
 }
-
-void mngSTDBY() {
+/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Manage STDBY button
   //TODO: test
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+void mngSTDBY(button *b) {
 
-  bool enable;
-  drawMessage (buttons[0].label);
+  drawMessage (b->label);
 
-  buttons[0].pressed=true;
-  if (buttons[0].state==on) {
-    enable=true;
-    buttons[0].state=off;
+  if (b->state==on) {
+    b->state=off;
     digitalWrite(PIN_STDBY,LOW);
+    if (buttons[AUTO].state == on) {
+        buttons[UP].enabled = false;
+        buttons[DOWN].enabled = false;
+    } else {
+      buttons[UP].enabled = true;
+      buttons[DOWN].enabled = true;
+    }
+    buttons[AUTO].enabled = true;
+    buttons[RESET].enabled = true;
   } else {
-    buttons[0].state=on;
-    enable=false;
     digitalWrite(PIN_STDBY,HIGH);
+    b->state=on;
+    buttons[UP].enabled = false;
+    buttons[DOWN].enabled = false;
+    buttons[AUTO].enabled = false;
+    buttons[RESET].enabled = false;
   }
 
-  for(int i=1;i<BUTTONS;i++) {
-    buttons[i].enabled=enable;
-  }
   drawButtons(false);
 }
 
+/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Manage band up button
+//TODO: test
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void mngUP(button *b) {
-  //TODO
   if (b->enabled) {
     drawMessage (b->label);
-//    b->enabled=!b->enabled;
   }
 }
 
+/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Manage band down button
+//TODO: test
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void mngDOWN(button *b) {
-//TODO
   if (b->enabled) {
     drawMessage (b->label);
-//    b->enabled=!b->enabled;
   }
 }
 
+/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Manage band auto button
+//TODO: test / disable up and down
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void mngAUTO(button *b) {
-  //TODO: test / disable up and down
   if (b->enabled) {
+    if (b->state==on) {
+      b->state=off;
+      buttons[UP].enabled=true;
+      buttons[DOWN].enabled=true;
+    } else {
+      b->state=on;
+      buttons[UP].enabled=false;
+      buttons[DOWN].enabled=false;
+    }
+    drawButtons(false);
     drawMessage (b->label);
-//    b->enabled=!b->enabled;
   }
 }
 
+/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Manage reset button
+//TODO: test
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void mngRESET(button *b) {
-  //TODO: test
+
   if (b->enabled) {
     drawMessage (b->label);
     b->pressed=true;
