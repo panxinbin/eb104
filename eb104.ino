@@ -3,7 +3,11 @@ Title: eb104 Controller
 Author: Corrado Gerbaldo - IU1BOW
 
 --------------------------------------------------------------------------------
-TODO: .....
+TODO: check temperature
+TODO: check current_band
+TODO: check PTT
+TODO: check band AUTO
+TODO: set TRANSMISSION / RECEPTION
 --------------------------------------------------------------------------------
 
 Links:
@@ -30,7 +34,6 @@ U8G2_FOR_ADAFRUIT_GFX u8g2_for_adafruit_gfx;
 TouchScreen ts(XP, YP, XM, YM, 300);   //re-initialised after diagnose
 TSPoint tp;                            //global point
 
-
 /*------------------------------------------------------------------------------
 Globals
 ------------------------------------------------------------------------------*/
@@ -53,49 +56,36 @@ struct button buttons[BUTTONS];
 
 float fwd;
 float ref;
+bands current_band;
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OBJ: Messenger
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+class Messenger {
+  private:
+    virtual void drawMessageGraphic() {
+      tft.fillRect(LCD_SPACING, tft.height()-LCD_BTN_H-LCD_MSG_H-LCD_SPACING,
+                    tft.width()-LCD_SPACING*2,LCD_MSG_H,LCD_MSG_BG);
+      u8g2_for_adafruit_gfx.setFont(FNT_MESSAGE);
+      u8g2_for_adafruit_gfx.setForegroundColor(LCD_MSG_FG);
+      u8g2_for_adafruit_gfx.setBackgroundColor(LCD_MSG_BG);
+      u8g2_for_adafruit_gfx.setCursor(LCD_MSG_X,
+                          tft.height()-
+                          LCD_BTN_H-(u8g2_for_adafruit_gfx.getFontAscent()+
+                          u8g2_for_adafruit_gfx.getFontDescent()*-1)/2);
+    }
+  public:
+    virtual void print (char msg[]) {
+      this->drawMessageGraphic();
+      u8g2_for_adafruit_gfx.print(msg);
+    };
+    virtual void print (int msg) {
+      this->drawMessageGraphic();
+      u8g2_for_adafruit_gfx.print(msg);
+    };
+};
 
+Messenger* msg;    // base-class pointer
 
-/******************************************************************************
-SETUP
-*******************************************************************************/
-void setup() {
-
-  //setup serial
-  Serial.begin(9600);
-  uint32_t when = millis();
-  if (!Serial) delay(5000);           //allow some time for Leonardo
-  Serial.println("Serial took " + String((millis() - when)) + "ms to start");
-
-  //setup tft and fonts
-  uint16_t ID = tft.readID(); //
-  Serial.print("TFT ID = 0x");
-  Serial.println(ID, HEX);
-  if (ID == 0xD3D3) ID = 0x9481; // write-only shield
-  tft.begin(ID);
-  tft.setRotation(ORIENTATION);
-  u8g2_for_adafruit_gfx.begin(tft);                 // connect u8g2 procedures to Adafruit GFX
-
-  //setup pins
-  pinMode(PIN_STDBY,OUTPUT);
-  pinMode(PIN_RESET,OUTPUT);
-  pinMode(PIN_BND_40,OUTPUT);
-  pinMode(PIN_BND_20,OUTPUT);
-  pinMode(PIN_BND_15,OUTPUT);
-  pinMode(PIN_BND_10,OUTPUT);
-
-  digitalWrite(PIN_STDBY,HIGH);
-  digitalWrite(PIN_RESET,LOW);
-  digitalWrite(PIN_BND_40,LOW);
-  digitalWrite(PIN_BND_20,HIGH);
-  digitalWrite(PIN_BND_15,LOW);
-  digitalWrite(PIN_BND_10,LOW);
-
-  Serial.println("digital pins setted");
-
-  //setup inital screen
-  drawMain();
-  Serial.println("End setup");
-}
 
 /*------------------------------------------------------------------------------
   Draw main screen
@@ -116,7 +106,7 @@ void drawMain(){
   drawMeasure(0,MAX_I,LBL_I,LCD_I_X,LCD_I_Y,
               LCD_I_W,LCD_I_H,1,LBL_I_MIN,LBL_I_MAX);
 
-  drawMessage(LBL_INITIAL_MSG);
+  msg->print(LBL_INITIAL_MSG);
   drawButtons(true);
 
 }
@@ -228,8 +218,12 @@ void drawButtons(bool init) {
       buttons[idxBtn].x=LCD_SPACING+i;
       buttons[idxBtn].y=tft_height-LCD_BTN_H-LCD_SPACING*2;
       buttons[idxBtn].label=LBL_BUTTON[idxBtn];
-      buttons[idxBtn].x_label=LCD_SPACING*2+i+(buttons[idxBtn].width-u8g2_for_adafruit_gfx.getUTF8Width(buttons[idxBtn].label))/2;
-      buttons[idxBtn].y_label=tft.height()-(LCD_BTN_H-u8g2_for_adafruit_gfx.getFontAscent()+u8g2_for_adafruit_gfx.getFontDescent()*-1)/2;
+      buttons[idxBtn].x_label=LCD_SPACING*2+i+
+                    (buttons[idxBtn].width-
+                    u8g2_for_adafruit_gfx.getUTF8Width(buttons[idxBtn].label))/2;
+      buttons[idxBtn].y_label=tft.height()-
+                    (LCD_BTN_H-u8g2_for_adafruit_gfx.getFontAscent()+
+                    u8g2_for_adafruit_gfx.getFontDescent()*-1)/2;
     };
     drawSingleButton(buttons[idxBtn]);
     idxBtn++;
@@ -239,12 +233,13 @@ void drawButtons(bool init) {
 
 /*.............................................................................
   Draw single button
+   select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
 ..............................................................................*/
 void drawSingleButton(button b) {
 
   //set font
   u8g2_for_adafruit_gfx.setBackgroundColor(LCD_BTN_BG);
-  u8g2_for_adafruit_gfx.setFont(FNT_BUTTONS);  // select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
+  u8g2_for_adafruit_gfx.setFont(FNT_BUTTONS);
 
   //draw buttons
   if (b.enabled == true) {
@@ -269,87 +264,6 @@ void drawSingleButton(button b) {
   //write labels
   u8g2_for_adafruit_gfx.setCursor(b.x_label, b.y_label);
   u8g2_for_adafruit_gfx.print(b.label);
-}
-
-/*------------------------------------------------------------------------------
-  Draw messages
- -----------------------------------------------------------------------------*/
-void drawMessage(char msg[]){
-
-  tft.fillRect(LCD_SPACING, tft.height()-LCD_BTN_H-LCD_MSG_H-LCD_SPACING,
-                tft.width()-LCD_SPACING*2,LCD_MSG_H,LCD_MSG_BG);
-  u8g2_for_adafruit_gfx.setFont(FNT_MESSAGE);
-  u8g2_for_adafruit_gfx.setForegroundColor(LCD_MSG_FG);
-  u8g2_for_adafruit_gfx.setBackgroundColor(LCD_MSG_BG);
-  u8g2_for_adafruit_gfx.setCursor(LCD_MSG_X,
-                      tft.height()-LCD_BTN_H-(u8g2_for_adafruit_gfx.getFontAscent()+u8g2_for_adafruit_gfx.getFontDescent()*-1)/2);
-  u8g2_for_adafruit_gfx.print(msg);
-}
-
-/******************************************************************************
-MAIN LOOP
-*******************************************************************************/
-void loop() {
-
-static int nr;
-
-    getTouch();
-/*  FWD measures
- *
- *   130,5
- *  180,10
- *  330,30
- *  390,50
- *  460,70
- *  580,100
- *  quadratic fit {130,5},{180,10},{330,30},{390,50},{460,70},{580,100}
- *  https://www.wolframalpha.com/input/
- */
-  nr++;
-  fwd=fwd+analogRead(sensorPinFWD);
-  // read reverse voltage
-  ref=ref+analogRead(sensorPinREF);
-  if (nr>100) {
-    fwd=fwd/nr;
-    ref=ref/nr;
-    nr=0;
-/*
-      // compute SWR and return
-      float wf;
-      if (ref == 0 || fwd < m_MinPower) {
-        wf = 1.0;
-      } else if (ref >= fwd) {
-        wf = maxSwr;
-      } else {
-        #ifdef USE_VOLTAGE_CALC
-        wf = (float)(fwd + ref) / (float)(fwd - ref);
-        #else
-        wf = (float)fwd / (float)ref;
-        wf = sqrt(wf);
-        wf = (1.0 + wf) / (1.0 - wf);
-        #endif
-        wf = abs(wf);
-      }
-
-      // clip the SWR at a reasonable value
-      if (wf > maxSwr) wf = maxSwr;
-
-      // store the final result
-      m_SWR = wf;
-*/
-/*
-    Serial.print(fwd);
-    Serial.print("\t");
-    //quadratic fit
-    Serial.print(quadratic(fwd));
-    Serial.print("\t");
-    Serial.print(ref);
-    Serial.print("\t");
-    //Serial.print(m_SWR);
-    Serial.print("\n");
-*/
-    showFWD(fwd);
-  }
 }
 
 void showFWD(float value) {
@@ -430,7 +344,7 @@ Manage STDBY button
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void mngSTDBY(button *b) {
 
-  drawMessage (b->label);
+  msg->print(b->label);
 
   if (b->state==on) {
     b->state=off;
@@ -462,7 +376,7 @@ Manage band up button
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void mngUP(button *b) {
   if (b->enabled) {
-    drawMessage (b->label);
+    current_band=changeBand(up,current_band);
   }
 }
 
@@ -472,7 +386,7 @@ Manage band down button
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 void mngDOWN(button *b) {
   if (b->enabled) {
-    drawMessage (b->label);
+    current_band=changeBand(down,current_band);
   }
 }
 
@@ -492,7 +406,7 @@ void mngAUTO(button *b) {
       buttons[DOWN].enabled=false;
     }
     drawButtons(false);
-    drawMessage (b->label);
+    msg->print(b->label);
   }
 }
 
@@ -503,7 +417,7 @@ Manage reset button
 void mngRESET(button *b) {
 
   if (b->enabled) {
-    drawMessage (b->label);
+    msg->print(b->label);
     b->pressed=true;
     drawSingleButton(*b);
     digitalWrite(PIN_RESET,HIGH);
@@ -511,5 +425,165 @@ void mngRESET(button *b) {
     digitalWrite(PIN_RESET,LOW);
     b->pressed=false;
     drawSingleButton(*b);
+  }
+}
+
+/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Change band manually
+//TODO: test
+//TODO: set filter
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+bands changeBand(direction dir,bands band) {
+
+  bands new_band;
+  if (dir==up) {
+    if (band==BND10) {
+      new_band=0;
+    } else {
+      new_band=band+1;
+    }
+  } else {
+    if (band==BND40) {
+      new_band=BND10;
+    } else {
+      new_band=band-1;
+    }
+  }
+
+  setFilter(new_band);
+  return new_band;
+};
+
+
+/*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+Change filter
+//TODO: test
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+int setFilter(bands band) {
+
+  int filter=PIN_FILTER_10;
+
+  if (band==BND40) {
+    filter=PIN_FILTER_40;
+  } else if (band<=BND20) {
+    filter=PIN_FILTER_20;
+  } else if (band<=BND15) {
+    filter=PIN_FILTER_15;
+  };
+
+  digitalWrite(PIN_FILTER_40,LOW);
+  digitalWrite(PIN_FILTER_20,LOW);
+  digitalWrite(PIN_FILTER_15,LOW);
+  digitalWrite(PIN_FILTER_10,LOW);
+  digitalWrite(filter,HIGH);
+
+  return filter;
+};
+/******************************************************************************
+SETUP
+*******************************************************************************/
+void setup() {
+msg = new Messenger();
+  //setup serial
+  Serial.begin(9600);
+  uint32_t when = millis();
+  if (!Serial) delay(5000);           //allow some time for Leonardo
+  Serial.println("Serial took " + String((millis() - when)) + "ms to start");
+
+  //setup tft and fonts
+  uint16_t ID = tft.readID(); //
+  Serial.print("TFT ID = 0x");
+  Serial.println(ID, HEX);
+  if (ID == 0xD3D3) ID = 0x9481; // write-only shield
+  tft.begin(ID);
+  tft.setRotation(ORIENTATION);
+  u8g2_for_adafruit_gfx.begin(tft);   // connect u8g2 procedures to Adafruit GFX
+
+  //setup pins
+  pinMode(PIN_STDBY,OUTPUT);
+  pinMode(PIN_RESET,OUTPUT);
+  pinMode(PIN_FILTER_40,OUTPUT);
+  pinMode(PIN_FILTER_20,OUTPUT);
+  pinMode(PIN_FILTER_15,OUTPUT);
+  pinMode(PIN_FILTER_10,OUTPUT);
+
+  digitalWrite(PIN_STDBY,HIGH);
+  digitalWrite(PIN_RESET,LOW);
+  digitalWrite(PIN_FILTER_40,LOW);
+  digitalWrite(PIN_FILTER_20,HIGH);
+  digitalWrite(PIN_FILTER_15,LOW);
+  digitalWrite(PIN_FILTER_10,LOW);
+
+  Serial.println("digital pins setted");
+
+  //setup inital screen
+  drawMain();
+  Serial.println("End setup");
+}
+
+/******************************************************************************
+MAIN LOOP
+*******************************************************************************/
+void loop() {
+
+static int nr;
+
+    getTouch();
+/*  FWD measures
+ *
+ *   130,5
+ *  180,10
+ *  330,30
+ *  390,50
+ *  460,70
+ *  580,100
+ *  quadratic fit {130,5},{180,10},{330,30},{390,50},{460,70},{580,100}
+ *  https://www.wolframalpha.com/input/
+ */
+  nr++;
+  fwd=fwd+analogRead(sensorPinFWD);
+  // read reverse voltage
+  ref=ref+analogRead(sensorPinREF);
+  if (nr>100) {
+    fwd=fwd/nr;
+    ref=ref/nr;
+    nr=0;
+/*
+      // compute SWR and return
+      float wf;
+      if (ref == 0 || fwd < m_MinPower) {
+        wf = 1.0;
+      } else if (ref >= fwd) {
+        wf = maxSwr;
+      } else {
+        #ifdef USE_VOLTAGE_CALC
+        wf = (float)(fwd + ref) / (float)(fwd - ref);
+        #else
+        wf = (float)fwd / (float)ref;
+        wf = sqrt(wf);
+        wf = (1.0 + wf) / (1.0 - wf);
+        #endif
+        wf = abs(wf);
+      }
+
+      // clip the SWR at a reasonable value
+      if (wf > maxSwr) wf = maxSwr;
+
+      // store the final result
+      m_SWR = wf;
+*/
+/*
+    Serial.print(fwd);
+    Serial.print("\t");
+    //quadratic fit
+    Serial.print(quadratic(fwd));
+    Serial.print("\t");
+    Serial.print(ref);
+    Serial.print("\t");
+    //Serial.print(m_SWR);
+    Serial.print("\n");
+*/
+    showFWD(fwd);
   }
 }

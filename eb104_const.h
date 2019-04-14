@@ -16,10 +16,10 @@ static const int sensorPinREF = A12;    // BIANCO
 //digital pins
 static const int PIN_STDBY = 43;
 static const int PIN_RESET = 41;
-static const int PIN_BND_40 = 39;
-static const int PIN_BND_20 = 37;
-static const int PIN_BND_15 = 35;
-static const int PIN_BND_10 = 33;
+static const int PIN_FILTER_40 = 39;
+static const int PIN_FILTER_20 = 37;
+static const int PIN_FILTER_15 = 35;
+static const int PIN_FILTER_10 = 33;
 
 //generic constant
 static const int MAX_FWD = 600;
@@ -37,3 +37,5 @@ static const float FWD_QUADRATIC_B=0.0399433;
 static const float FWD_QUADRATIC_C=-5.32213;
 
 enum button_index{STDBY,UP,DOWN,AUTO,RESET};
+enum bands{BND40,BND30,BND20,BND17,BND15,BND12,BND10};
+enum direction{down,up};
