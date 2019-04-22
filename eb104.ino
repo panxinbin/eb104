@@ -40,6 +40,7 @@ Globals
 ------------------------------------------------------------------------------*/
 enum button_state{off,on,null};
 
+/*
 struct button {
   bool pressed;
   bool enabled;
@@ -53,13 +54,13 @@ struct button {
   int y_label;
 };
 
-struct button buttons[BUTTONS];
+struct button buttons[BUTTONS]; */
 
 float fwd;
 float ref;
 bands current_band;
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-OBJ: Messenger
+CLASS: Messenger
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 class Messenger {
   private:
@@ -86,6 +87,28 @@ class Messenger {
 };
 
 Messenger* msg;    // base-class pointer
+
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CLASS: Button
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+class Button
+ {
+ public:
+    bool pressed;
+    bool enabled;
+    button_state state;
+    char *label;
+    int x;
+    int y;
+    int width;
+    int height;
+    int x_label;
+    int y_label;
+};
+
+
+Button buttons[BUTTONS];    // base-class pointer
 
 
 /*------------------------------------------------------------------------------
@@ -236,7 +259,7 @@ void drawButtons(bool init) {
   Draw single button
    select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
 ..............................................................................*/
-void drawSingleButton(button b) {
+void drawSingleButton(Button b) {
 
   //set font
   u8g2_for_adafruit_gfx.setBackgroundColor(LCD_BTN_BG);
@@ -343,7 +366,7 @@ void getTouch(){
 Manage STDBY button
   //TODO: test
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngSTDBY(button *b) {
+void mngSTDBY(Button *b) {
 
   msg->print(b->label);
 
@@ -375,7 +398,7 @@ void mngSTDBY(button *b) {
 Manage band up button
 //TODO: test
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngUP(button *b) {
+void mngUP(Button *b) {
   if (b->enabled) {
     current_band=changeBand(up,current_band);
   }
@@ -385,7 +408,7 @@ void mngUP(button *b) {
 Manage band down button
 //TODO: test
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngDOWN(button *b) {
+void mngDOWN(Button *b) {
   if (b->enabled) {
     current_band=changeBand(down,current_band);
   }
@@ -395,7 +418,7 @@ void mngDOWN(button *b) {
 Manage band auto button
 //TODO: test / disable up and down
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngAUTO(button *b) {
+void mngAUTO(Button *b) {
   if (b->enabled) {
     if (b->state==on) {
       b->state=off;
@@ -415,7 +438,7 @@ void mngAUTO(button *b) {
 Manage reset button
 //TODO: test
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngRESET(button *b) {
+void mngRESET(Button *b) {
 
   if (b->enabled) {
     msg->print(b->label);
@@ -452,6 +475,8 @@ bands changeBand(direction dir,bands band) {
   }
 
   setFilter(new_band);
+
+  msg->print(new_band);
   return new_band;
 };
 
@@ -485,7 +510,7 @@ int setFilter(bands band) {
 SETUP
 *******************************************************************************/
 void setup() {
-msg = new Messenger();
+  msg = new Messenger();
   //setup serial
   Serial.begin(9600);
   uint32_t when = millis();
