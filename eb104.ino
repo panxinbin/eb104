@@ -9,6 +9,8 @@ TODO: check current_band
 TODO: check PTT
 TODO: check band AUTO
 TODO: set TRANSMISSION / RECEPTION
+TODO: inherit and extend class button
+TODO: create object of measure bars
 --------------------------------------------------------------------------------
 
 Links:
@@ -38,24 +40,6 @@ TSPoint tp;                            //global point
 /*------------------------------------------------------------------------------
 Globals
 ------------------------------------------------------------------------------*/
-enum button_state{off,on,null};
-
-/*
-struct button {
-  bool pressed;
-  bool enabled;
-  button_state state;
-  char *label;
-  int x;
-  int y;
-  int width;
-  int height;
-  int x_label;
-  int y_label;
-};
-
-struct button buttons[BUTTONS]; */
-
 float fwd;
 float ref;
 bands current_band;
@@ -77,11 +61,11 @@ class Messenger {
     }
   public:
     virtual void print (char msg[]) {
-      this->drawMessageGraphic();
+      drawMessageGraphic();
       u8g2_for_adafruit_gfx.print(msg);
     };
     virtual void print (int msg) {
-      this->drawMessageGraphic();
+      drawMessageGraphic();
       u8g2_for_adafruit_gfx.print(msg);
     };
 };
@@ -90,11 +74,11 @@ Messenger* msg;    // base-class pointer
 
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-CLASS: Button
+CLASS: Button and their derived
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-class Button
- {
+class Button {
  public:
+    enum button_state{off,on,null};
     bool pressed;
     bool enabled;
     button_state state;
@@ -105,11 +89,113 @@ class Button
     int height;
     int x_label;
     int y_label;
+    int pin;
+/*.............................................................................
+  constructor
+..............................................................................*/
+    Button (int pos, MCUFRIEND_kbv *tft, char *lbl) {
+      state=null;
+      enabled=false;
+      pressed=false;
+      tft_height = tft->height();
+      tft_width = tft->width();
+      position=pos*tft_width/BUTTONS;
+      width=tft_width/BUTTONS-LCD_SPACING*2;
+      height=tft_height-LCD_BTN_H;
+      x=LCD_SPACING+position;
+      y=tft_height-LCD_BTN_H-LCD_SPACING*2;
+      setLabel(lbl);
+    };
+
+/*.............................................................................
+  Set label of the button
+..............................................................................*/
+    setLabel (char *lbl) {
+      label=lbl;
+      x_label=LCD_SPACING*2+position+
+                    (width-
+                    u8g2_for_adafruit_gfx.getUTF8Width(label))/2;
+      y_label=tft_height-
+                    (LCD_BTN_H-u8g2_for_adafruit_gfx.getFontAscent()+
+                    u8g2_for_adafruit_gfx.getFontDescent()*-1)/2;
+    };
+
+/*.............................................................................
+  Draw button
+   select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
+   TODO: use tft as pointer
+..............................................................................*/
+    draw() {
+      //set font
+      u8g2_for_adafruit_gfx.setBackgroundColor(LCD_BTN_BG);
+      u8g2_for_adafruit_gfx.setFont(FNT_BUTTONS);
+
+      //draw buttons
+      if (enabled == true) {
+        u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG);
+      } else {
+        u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG_DIS);
+      }
+
+      if (pressed == true) {
+        tft.fillRect(x,y,width,height,LCD_BTN_BG_PRES);
+      } else {
+        tft.fillRect(x,y,width,height,LCD_BTN_BG);
+      }
+
+      //write "led" only on buttons with state on or off
+      if (state == button_state::on) {
+        tft.fillCircle(x+width/10,y+width/10,width/25,LCD_BTN_ON);
+      } else if (state == button_state::off) {
+        tft.fillCircle(x+width/10,y+width/10,width/25,LCD_BTN_OFF);
+      }
+
+      //write labels
+      u8g2_for_adafruit_gfx.setCursor(x_label, y_label);
+      u8g2_for_adafruit_gfx.print(label);
+    };
+
+  private:
+    int position;
+    int tft_height;
+    int tft_width;
 };
 
+class ButtonStdby: public Button  {
+  public:
+    ButtonStdby (int position, void *tft, char *lbl):Button(position, tft, lbl)  {
+      state=on;
+      enabled=true;
+    };
+    pinInit(int pin) {
+      this->pin = pin;
+      digitalWrite(this->pin, HIGH);
+    };
+};
 
-Button buttons[BUTTONS];    // base-class pointer
+class ButtonAuto: public Button {
+  public:
+    ButtonAuto (int position, void *tft, char *lbl):Button(position, tft, lbl) {
+      state=on;
+      enabled=false;
+    };
+};
 
+class ButtonReset: public Button {
+  public:
+    ButtonReset (int position, void *tft,char *lbl ):Button(position, tft, lbl) {
+    };
+    pinInit(int pin) {
+      this->pin = pin;
+      digitalWrite(this->pin, LOW);
+    };
+};
+
+ButtonStdby* btnSTDBY;
+Button* btnUP;
+Button* btnDOWN;
+ButtonAuto* btnAUTO;
+ButtonReset* btnRESET;
 
 /*------------------------------------------------------------------------------
   Draw main screen
@@ -131,7 +217,7 @@ void drawMain(){
               LCD_I_W,LCD_I_H,1,LBL_I_MIN,LBL_I_MAX);
 
   msg->print(LBL_INITIAL_MSG);
-  drawButtons(true);
+  drawButtons();
 
 }
 
@@ -211,84 +297,20 @@ void drawMeasureBar(long value, long max, int x, int y, int len, int height,
       tft.fillRect(x+i,y,space-border,height,LCD_BAR_BG);
     } else
       tft.fillRect(x+i,y,space-border,height,LCD_BAR_FG);
-  }
-}
+  };
+};
 
 /*------------------------------------------------------------------------------
   Draw buttons
  -----------------------------------------------------------------------------*/
-void drawButtons(bool init) {
+void drawButtons() {
 
-  byte idxBtn=0;
-
-  int tft_height = tft.height();
-  int tft_width = tft.width();
-
-  for(int i=LCD_SPACING;i<tft_width;i=i+tft_width/BUTTONS) {
-    if (init) {
-      if (idxBtn==STDBY) {  //enabling only stdby button
-        buttons[idxBtn].state=on;
-        buttons[idxBtn].enabled=true;
-      } else if (idxBtn==AUTO) {  //for auto button set the led to off
-        buttons[idxBtn].state=on;
-        buttons[idxBtn].enabled=false;
-      } else {
-       buttons[idxBtn].state=null;
-       buttons[idxBtn].enabled=false;
-      }
-      buttons[idxBtn].pressed=false;
-      buttons[idxBtn].width=tft_width/BUTTONS-LCD_SPACING*2;
-      buttons[idxBtn].height=tft_height-LCD_BTN_H;
-      buttons[idxBtn].x=LCD_SPACING+i;
-      buttons[idxBtn].y=tft_height-LCD_BTN_H-LCD_SPACING*2;
-      buttons[idxBtn].label=LBL_BUTTON[idxBtn];
-      buttons[idxBtn].x_label=LCD_SPACING*2+i+
-                    (buttons[idxBtn].width-
-                    u8g2_for_adafruit_gfx.getUTF8Width(buttons[idxBtn].label))/2;
-      buttons[idxBtn].y_label=tft.height()-
-                    (LCD_BTN_H-u8g2_for_adafruit_gfx.getFontAscent()+
-                    u8g2_for_adafruit_gfx.getFontDescent()*-1)/2;
-    };
-    drawSingleButton(buttons[idxBtn]);
-    idxBtn++;
-  }
-
-}
-
-/*.............................................................................
-  Draw single button
-   select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fnt
-..............................................................................*/
-void drawSingleButton(Button b) {
-
-  //set font
-  u8g2_for_adafruit_gfx.setBackgroundColor(LCD_BTN_BG);
-  u8g2_for_adafruit_gfx.setFont(FNT_BUTTONS);
-
-  //draw buttons
-  if (b.enabled == true) {
-    u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG);
-  } else {
-    u8g2_for_adafruit_gfx.setForegroundColor(LCD_BTN_FG_DIS);
-  }
-
-  if (b.pressed == true) {
-    tft.fillRect(b.x,b.y,b.width,b.height,LCD_BTN_BG_PRES);
-  } else {
-    tft.fillRect(b.x,b.y,b.width,b.height,LCD_BTN_BG);
-  }
-
-  //write "led" only on buttons with state on or off
-  if (b.state == on) {
-    tft.fillCircle(b.x+b.width/10,b.y+b.width/10,b.width/25,LCD_BTN_ON);
-  } else if (b.state == off) {
-    tft.fillCircle(b.x+b.width/10,b.y+b.width/10,b.width/25,LCD_BTN_OFF);
-  }
-
-  //write labels
-  u8g2_for_adafruit_gfx.setCursor(b.x_label, b.y_label);
-  u8g2_for_adafruit_gfx.print(b.label);
-}
+  btnSTDBY->draw();
+  btnUP->draw();
+  btnDOWN->draw();
+  btnAUTO->draw();
+  btnRESET->draw();
+};
 
 void showFWD(float value) {
 
@@ -340,66 +362,59 @@ void getTouch(){
       ypos = map(tp.x, TS_TOP, TS_BOT, 0, tft.height());
     } else if (tftToRelease == 1) {
       tftToRelease = 0;
-      if (ypos > (buttons[0].y)) {
-        for(int i=0;i<BUTTONS;i++) {
-          if ((xpos >= buttons[i].x) && (xpos <= buttons[i].x+buttons[i].width)) {
-            if (i==STDBY) {
-              mngSTDBY(&buttons[i]);
-            } else if (i==UP) {
-              mngUP(&buttons[i]);
-            } else if (i==DOWN) {
-              mngDOWN(&buttons[i]);
-            } else if (i==AUTO) {
-              mngAUTO(&buttons[i]);
-            } else if (i==RESET) {
-              mngRESET(&buttons[i]);
-            }
-          }
+      if (ypos > btnSTDBY->y) {
+        if ((xpos >= btnSTDBY->x) && (xpos <= btnSTDBY->x+btnSTDBY->width)) {
+            mngSTDBY();
+        } else if ((xpos >= btnUP->x) && (xpos <= btnUP->x+btnUP->width)) {
+          mngUP();
+        } else if ((xpos >= btnDOWN->x) && (xpos <= btnDOWN->x+btnDOWN->width)) {
+          mngDOWN();
+        } else if ((xpos >= btnAUTO->x) && (xpos <= btnAUTO->x+btnAUTO->width)) {
+          mngAUTO();
+        } else {
+          mngRESET();
         }
       }
     }
   } else if (cntNotPress > 0) {
     cntNotPress--;
   }
-}
+};
 /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 Manage STDBY button
   //TODO: test
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngSTDBY(Button *b) {
+void mngSTDBY() {
 
-  msg->print(b->label);
-
-  if (b->state==on) {
-    b->state=off;
-    digitalWrite(PIN_STDBY,LOW);
-    if (buttons[AUTO].state == on) {
-        buttons[UP].enabled = false;
-        buttons[DOWN].enabled = false;
+  if (btnSTDBY->state==Button::button_state::on) {
+    btnSTDBY->state=Button::button_state::off;
+    digitalWrite(btnSTDBY->pin,LOW);
+    if (btnAUTO->state == Button::button_state::on) {
+        btnUP->enabled = false;
+        btnDOWN->enabled = false;
     } else {
-      buttons[UP].enabled = true;
-      buttons[DOWN].enabled = true;
+      btnUP->enabled = true;
+      btnDOWN->enabled = true;
     }
-    buttons[AUTO].enabled = true;
-    buttons[RESET].enabled = true;
+    btnAUTO->enabled = true;
+    btnRESET->enabled = true;
   } else {
-    digitalWrite(PIN_STDBY,HIGH);
-    b->state=on;
-    buttons[UP].enabled = false;
-    buttons[DOWN].enabled = false;
-    buttons[AUTO].enabled = false;
-    buttons[RESET].enabled = false;
+    digitalWrite(btnSTDBY->pin,HIGH);
+    btnSTDBY->state=Button::button_state::on;
+    btnUP->enabled = false;
+    btnDOWN->enabled = false;
+    btnAUTO->enabled = false;
+    btnRESET->enabled = false;
   }
-
-  drawButtons(false);
+  drawButtons();
 }
 
 /*-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 Manage band up button
 //TODO: test
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngUP(Button *b) {
-  if (b->enabled) {
+void mngUP() {
+  if (btnUP->enabled) {
     current_band=changeBand(up,current_band);
   }
 }
@@ -408,8 +423,8 @@ void mngUP(Button *b) {
 Manage band down button
 //TODO: test
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngDOWN(Button *b) {
-  if (b->enabled) {
+void mngDOWN() {
+  if (btnDOWN->enabled) {
     current_band=changeBand(down,current_band);
   }
 }
@@ -418,19 +433,19 @@ void mngDOWN(Button *b) {
 Manage band auto button
 //TODO: test / disable up and down
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngAUTO(Button *b) {
-  if (b->enabled) {
-    if (b->state==on) {
-      b->state=off;
-      buttons[UP].enabled=true;
-      buttons[DOWN].enabled=true;
+void mngAUTO() {
+  if (btnAUTO->enabled) {
+    if (btnAUTO->state==Button::button_state::on) {
+      btnAUTO->state=Button::button_state::off;
+      btnUP->enabled=true;
+      btnDOWN->enabled=true;
     } else {
-      b->state=on;
-      buttons[UP].enabled=false;
-      buttons[DOWN].enabled=false;
+      btnAUTO->state=Button::button_state::on;
+      btnUP->enabled=false;
+      btnDOWN->enabled=false;
     }
-    drawButtons(false);
-    msg->print(b->label);
+    drawButtons();
+    msg->print(btnAUTO->label);
   }
 }
 
@@ -438,17 +453,17 @@ void mngAUTO(Button *b) {
 Manage reset button
 //TODO: test
 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-void mngRESET(Button *b) {
+void mngRESET() {
 
-  if (b->enabled) {
-    msg->print(b->label);
-    b->pressed=true;
-    drawSingleButton(*b);
-    digitalWrite(PIN_RESET,HIGH);
+  if (btnRESET->enabled) {
+    msg->print(btnRESET->label);
+    btnRESET->pressed=true;
+    btnRESET->draw();
+    digitalWrite(btnRESET->pin,HIGH);
     delay(1000);
-    digitalWrite(PIN_RESET,LOW);
-    b->pressed=false;
-    drawSingleButton(*b);
+    digitalWrite(btnRESET->pin,LOW);
+    btnRESET->pressed=false;
+    btnRESET->draw();
   }
 }
 
@@ -510,7 +525,7 @@ int setFilter(bands band) {
 SETUP
 *******************************************************************************/
 void setup() {
-  msg = new Messenger();
+
   //setup serial
   Serial.begin(9600);
   uint32_t when = millis();
@@ -526,20 +541,27 @@ void setup() {
   tft.setRotation(ORIENTATION);
   u8g2_for_adafruit_gfx.begin(tft);   // connect u8g2 procedures to Adafruit GFX
 
+  //init objects
+  msg = new Messenger();
+  btnSTDBY=new ButtonStdby(STDBY, &tft, LBL_STBY);
+  btnSTDBY->pinInit(PIN_STDBY);
+  btnUP=new Button(UP, &tft, LBL_UP);
+  btnDOWN=new Button(DOWN, &tft, LBL_DOWN);
+  btnAUTO=new ButtonAuto(AUTO, &tft, LBL_AUTO);
+  btnRESET=new ButtonReset(RESET, &tft, LBL_RESET);
+  btnRESET->pinInit(PIN_RESET);
+
   //setup pins
-  pinMode(PIN_STDBY,OUTPUT);
-  pinMode(PIN_RESET,OUTPUT);
   pinMode(PIN_FILTER_40,OUTPUT);
   pinMode(PIN_FILTER_20,OUTPUT);
   pinMode(PIN_FILTER_15,OUTPUT);
   pinMode(PIN_FILTER_10,OUTPUT);
 
-  digitalWrite(PIN_STDBY,HIGH);
-  digitalWrite(PIN_RESET,LOW);
   digitalWrite(PIN_FILTER_40,LOW);
   digitalWrite(PIN_FILTER_20,HIGH);
   digitalWrite(PIN_FILTER_15,LOW);
   digitalWrite(PIN_FILTER_10,LOW);
+
 
   Serial.println("digital pins setted");
 
