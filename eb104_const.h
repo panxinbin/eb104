@@ -13,6 +13,7 @@ static const int TS_LEFT=957,TS_RT=93,TS_TOP=909,TS_BOT=124;
 static const int sensorPinFWD = A13;    // GIALLO
 static const int sensorPinREF = A12;    // BIANCO
 
+
 //digital pins
 static const int PIN_STDBY = 43;
 static const int PIN_RESET = 41;
@@ -31,6 +32,7 @@ static const float MAX_I = 26;
 static const int MINPRESSURE=30;
 static const int MAXPRESSURE=1000;
 static const byte MAX_CNT_NOT_PRESS=14;
+static const byte AVG_CNT=100;
 
 static const float FWD_QUADRATIC_A=0.000249622;
 static const float FWD_QUADRATIC_B=0.0399433;
